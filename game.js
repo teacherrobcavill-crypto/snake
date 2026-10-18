@@ -315,15 +315,33 @@ class SnakeGame {
   }
 
   loadSettings() {
+    // 1. Check window.VIBE_CONFIG or localStorage vibe state
+    let vibeCfg = window.VIBE_CONFIG;
+    if (!vibeCfg) {
+      try {
+        const raw = localStorage.getItem('vibe_state_snake');
+        if (raw) vibeCfg = JSON.parse(raw);
+      } catch (e) {}
+    }
+    if (vibeCfg) {
+      if (vibeCfg.food) this.customFoodEmoji = vibeCfg.food;
+      if (vibeCfg.speed) this.setSpeedLevel(vibeCfg.speed, false);
+      if (vibeCfg.theme) {
+        const themeMap = { candy: 'cyberpunk', gold: 'neon', lava: 'neon', cyberpunk: 'cyberpunk', neon: 'neon' };
+        const mapped = themeMap[vibeCfg.theme] || vibeCfg.theme;
+        if (this.themes.includes(mapped)) this.applyTheme(mapped);
+      }
+    }
+
     const savedTheme = localStorage.getItem('neon_snake_theme');
-    if (savedTheme && this.themes.includes(savedTheme)) {
+    if (savedTheme && this.themes.includes(savedTheme) && !this.customFoodEmoji) {
       this.currentThemeIdx = this.themes.indexOf(savedTheme);
       this.applyTheme(savedTheme);
     }
     const savedSpeed = parseInt(localStorage.getItem('neon_snake_speed_level'), 10);
-    if (!isNaN(savedSpeed) && savedSpeed >= 1 && savedSpeed <= 10) {
+    if (!isNaN(savedSpeed) && savedSpeed >= 1 && savedSpeed <= 10 && !vibeCfg?.speed) {
       this.setSpeedLevel(savedSpeed, false);
-    } else {
+    } else if (!vibeCfg?.speed) {
       this.setSpeedLevel(5, false);
     }
   }
@@ -875,7 +893,7 @@ class SnakeGame {
       ctx.stroke();
     }
 
-    // 2. Draw Food (Apple)
+    // 2. Draw Food (Custom Emoji or Apple)
     if (this.food) {
       const fx = this.food.x * tileSize + tileSize / 2;
       const fy = this.food.y * tileSize + tileSize / 2;
@@ -883,18 +901,25 @@ class SnakeGame {
       const radius = (tileSize / 2 - 3) + pulse;
 
       ctx.save();
-      ctx.shadowColor = foodColor;
-      ctx.shadowBlur = 12;
-      ctx.fillStyle = foodColor;
-      ctx.beginPath();
-      ctx.arc(fx, fy + 1, Math.max(3, radius), 0, Math.PI * 2);
-      ctx.fill();
+      if (this.customFoodEmoji) {
+        ctx.font = `${Math.floor(tileSize * 0.95)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.customFoodEmoji, fx, fy + 2);
+      } else {
+        ctx.shadowColor = foodColor;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = foodColor;
+        ctx.beginPath();
+        ctx.arc(fx, fy + 1, Math.max(3, radius), 0, Math.PI * 2);
+        ctx.fill();
 
-      // Leaf stem
-      ctx.fillStyle = '#00ff88';
-      ctx.beginPath();
-      ctx.arc(fx + 2, fy - radius + 1, 3, 0, Math.PI * 2);
-      ctx.fill();
+        // Leaf stem
+        ctx.fillStyle = '#00ff88';
+        ctx.beginPath();
+        ctx.arc(fx + 2, fy - radius + 1, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
